@@ -32,7 +32,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	std::normal_distribution<double> N_y(y, std[1]);
 	std::normal_distribution<double> N_theta(theta, std[2]);
 	
-	for (i = 0; i < num_particles; i++) {
+	for (int i = 0; i < num_particles; i++) {
 		Particle particle;
 		particle.id = i;
 		particle.x = N_x(gen);
@@ -55,7 +55,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	
 	default_random_engine gen;
 	
-	for (i = 0; i < num_particles; i++) 
+	for (int i = 0; i < num_particles; i++) 
 	{
 		double new_y;
 		double new_x;
@@ -64,8 +64,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		//Instead of a hard check of 0, adding a check for very low value of yaw_rate
 		if (yaw_rate == 0) 
 		{
-			new_x = particles[i].x + velocity*delta_t*cos(particles[i]_theta);
-			new_y = particles[i].y + velocity*delta_t*sin(particles[i]_theta);
+			new_x = particles[i].x + velocity*delta_t*cos(particles[i].theta);
+			new_y = particles[i].y + velocity*delta_t*sin(particles[i].theta);
 			new_theta = particles[i].theta;
 		} 
 		else 
@@ -107,11 +107,37 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
 	
+
+	/*
+	Need to:
+		1. Find landmarks
+		2. Transform observation coordinates
+		3. associate observations to landmark
+		4. Calculate weights
+	*/
 	for(int p = 0; p < num_particles; p++)
 	{
 		vector<double> sense_x;
 		vector<double> sense_y;
 		
+		// Find landmarks
+		vector<LandmarkObs> landmarks_found;
+		for(int i = 0; i < map_landmarks.landmark_list.size(); i++)
+		{
+			float x_landmarks = map_landmarks.landmark_list[i].x_f;
+			float y_landmarks = map_landmarks.landmark_list[i].y_f;
+			int id_landmarks = map_landmarks.landmark_list[i].id_i;
+
+			// Use pythagoras theorem for checking sensor range
+			float diff_x2 = pow(particles[p].x - x_landmarks, 2);
+			float diff_y2 = pow(particles[p].y - y_landmarks, 2);
+
+			if((diff_x2 + diff_y2) <= pow(sensor_range, 2))
+				landmarks_found.push_back(LandmarkObs{id_landmarks, x_landmarks, y_landmarks});
+		}
+
+
+		// Transform obseration coordinates
 		vector<LandmarkObs> trans_observations;
 		LandmarkObs obs;
 		for(int i = 0; i < observations.size(); i++)
@@ -125,30 +151,39 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			trans_observations.push_back(trans_obs);
 		}
 		
-		dataAssociation(predictions, trans_obs);
+		// Associate observations to landmark
+		dataAssociation(landmarks_found, trans_observations);
 		
+
+		// Calculate weights
 		particles[p].weight = 1;
 		for(int i = 0; i < trans_observations.size(); i++)
 		{
-			if (association != 0)
+			double meas_x = trans_observations[i].x;	// Transformed observation x landmark
+			double meas_y = trans_observations[i].y;	// Transformed observation y landmark
+			double std_x = std_landmark[0];
+			double std_y = std_landmark[1];
+
+			for(int j = 0; j < landmarks_found.size(); j++)
 			{
-				double meas_x = trans_observations[i].x;
-				double meas_y = trans_observations[i].y;
-				double mu_x = map_landmarks.landmark_list[association].x_f;
-				double mu_y = map_landmarks.landmark_list[association].y_f;
-				double std_x = std_landmark[0];
-				double std_y = std_landmark[1];
-				
-				long double multipler = 1/(2*M_PI*std_x*std_y)*exp(-pow(meas_x-mu_x,2)/(2*pow(std_x,2)) - pow(meas_y-mu_y,2)/(2*pow(std_y,2)));
-				
-				if(multipler > 0)
-					particles[p].weight *= multipler;
-				
-				associations.push_back(association+1);
-				sense_x.push_back(trans_observations[i].x);
-				sense_y.push_back(trans_observations[i].y);
+				double mu_x = map_landmarks.landmark_list[j].x_f;	// Landmark x that was located
+				double mu_y = map_landmarks.landmark_list[j].y_f;	// Landmark y that was located
+
+				if (landmarks_found[j].id == trans_observations[i].id)
+				{
+					
+					long double multipler = 1/(2*M_PI*std_x*std_y)*exp(-pow(meas_x-mu_x,2)/(2*pow(std_x,2)) - pow(meas_y-mu_y,2)/(2*pow(std_y,2)));
+					
+					if(multipler > 0)
+						particles[p].weight *= multipler;
+					
+					// associations.push_back(association+1);
+					// sense_x.push_back(trans_observations[i].x);
+					// sense_y.push_back(trans_observations[i].y);
+				}
+				weights[p] = particles[p].weight;
 			}
-			weights[p] = particles[p].weight;
+			
 		}
 	}
 }
