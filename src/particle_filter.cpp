@@ -92,10 +92,12 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
 
+
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
-		const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
+		const std::vector<LandmarkObs> &observations, const Map &map_landmarks) 
+{
 	// TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
 	//   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
 	// NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
@@ -134,6 +136,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 			if((diff_x2 + diff_y2) <= pow(sensor_range, 2))
 				landmarks_found.push_back(LandmarkObs{id_landmarks, x_landmarks, y_landmarks});
+
 		}
 
 
@@ -171,8 +174,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 				if (landmarks_found[j].id == trans_observations[i].id)
 				{
-					
-					long double multipler = 1/(2*M_PI*std_x*std_y)*exp(-pow(meas_x-mu_x,2)/(2*pow(std_x,2)) - pow(meas_y-mu_y,2)/(2*pow(std_y,2)));
+					long double dx2 = pow(meas_x-mu_x,2);
+					long double dy2 = pow(meas_y-mu_y,2);
+
+					long double std_x2 = pow(std_x,2);
+					long double std_y2 = pow(std_y,2);
+
+					long double exp_equation = dx2/(2*std_x2) + dy2/(2*std_y2);
+
+					long double multipler = 1/(2*M_PI*std_x*std_y)*exp(-exp_equation);
 					
 					if(multipler > 0)
 						particles[p].weight *= multipler;
