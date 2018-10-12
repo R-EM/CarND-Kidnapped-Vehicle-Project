@@ -185,6 +185,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			}
 			
 		}
+
+		// Normalize weights
+		long double weights_sum = 0;
+		for(int i = 0; i < weights.size(); i++)
+			weights_sum += weights[p];
+		
+		for(int i = 0; i < weights.size(); i++)
+			weights[p] /= weights_sum;
+		
 	}
 }
 
