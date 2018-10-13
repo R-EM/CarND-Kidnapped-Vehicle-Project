@@ -61,7 +61,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		double new_x;
 		double new_theta;
 
-		//Instead of a hard check of 0, adding a check for very low value of yaw_rate
 		if (yaw_rate == 0) 
 		{
 			new_x = particles[i].x + velocity*delta_t*cos(particles[i].theta);
@@ -72,7 +71,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		{
 			new_x = particles[i].x + (velocity/yaw_rate)*(sin(particles[i].theta + yaw_rate*delta_t) - sin(particles[i].theta));
 			new_y = particles[i].y + (velocity/yaw_rate)*(cos(particles[i].theta) - cos(particles[i].theta + yaw_rate*delta_t));
-			new_theta = particles[i].theta + (yaw_rate * delta_t);
+			new_theta = particles[i].theta + yaw_rate*delta_t;
 		}
 
 		normal_distribution<double> N_x(new_x, std_pos[0]);
@@ -91,7 +90,25 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
+	for(int i = 0; i < observations.size(); i++)
+	{
+		// Set minimum distance to biggest value possible
+		double minimum_distance = numeric_limits<double>::max();
 
+		for(int j = 0; j < predicted.size(); j++)
+		{
+			//double diffX = observations[i].x - predicted[j].x;
+			//double diffY = observations[i].y - predicted[j].y;
+			//double current_distance = sqrt(pow(diffX,2)+pow(diffY,2));
+			
+			double current_distance = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);
+			if(current_distance < minimum_distance)
+			{
+				minimum_distance = current_distance;
+				observations[i].id = predicted[j].id;
+			}
+		}
+	}
 
 }
 
@@ -110,7 +127,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   http://planning.cs.uiuc.edu/node99.html
 	
 
-	/*
+	/*1
 	Need to:
 		1. Find landmarks
 		2. Transform observation coordinates
@@ -134,7 +151,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			float diff_x2 = pow(particles[p].x - x_landmarks, 2);
 			float diff_y2 = pow(particles[p].y - y_landmarks, 2);
 
-			if((diff_x2 + diff_y2) <= pow(sensor_range, 2))
+			//if((diff_x2 + diff_y2) <= pow(sensor_range, 2))
+			if(fabs(x_landmarks - particles[p].x)<= sensor_range && fabs(y_landmarks - particles[p].y)<= sensor_range)
 				landmarks_found.push_back(LandmarkObs{id_landmarks, x_landmarks, y_landmarks});
 
 		}
@@ -146,11 +164,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		for(int i = 0; i < observations.size(); i++)
 		{
 			LandmarkObs trans_obs;
-			obs = observations[i];
 			
 			// Perform the space transformation from vehicle tomap
-			trans_obs.x = particles[p].x + (obs.x*cos(particles[p].theta)-obs.y*sin(particles[p].theta));
-			trans_obs.y = particles[p].y + (obs.x*sin(particles[p].theta)+obs.y*cos(particles[p].theta));
+			trans_obs.x = particles[p].x + (observations[i].x*cos(particles[p].theta) - observations[i].y*sin(particles[p].theta));
+			trans_obs.y = particles[p].y + (observations[i].x*sin(particles[p].theta) + observations[i].y*cos(particles[p].theta));
 			trans_observations.push_back(trans_obs);
 		}
 		
@@ -187,9 +204,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 					if(multipler > 0)
 						particles[p].weight *= multipler;
 					
-					// associations.push_back(association+1);
-					// sense_x.push_back(trans_observations[i].x);
-					// sense_y.push_back(trans_observations[i].y);
+					//associations.push_back(association+1);
+					//sense_x.push_back(trans_observations[i].x);
+					//sense_y.push_back(trans_observations[i].y);
 				}
 				weights[p] = particles[p].weight;
 			}
