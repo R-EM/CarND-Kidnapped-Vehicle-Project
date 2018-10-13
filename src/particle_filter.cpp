@@ -186,8 +186,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 			for(int j = 0; j < landmarks_found.size(); j++)
 			{
-				double mu_x = map_landmarks.landmark_list[j].x_f;	// Landmark x that was located
-				double mu_y = map_landmarks.landmark_list[j].y_f;	// Landmark y that was located
+				double mu_x = landmarks_found[j].x;	// Landmark x that was located
+				double mu_y = landmarks_found[j].y;	// Landmark y that was located
 
 				if (landmarks_found[j].id == trans_observations[i].id)
 				{
