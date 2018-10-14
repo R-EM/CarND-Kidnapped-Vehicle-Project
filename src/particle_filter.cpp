@@ -97,10 +97,6 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
 		for(int j = 0; j < predicted.size(); j++)
 		{
-			//double diffX = observations[i].x - predicted[j].x;
-			//double diffY = observations[i].y - predicted[j].y;
-			//double current_distance = sqrt(pow(diffX,2)+pow(diffY,2));
-			
 			double current_distance = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);
 			if(current_distance < minimum_distance)
 			{
@@ -203,24 +199,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 					
 					if(multipler > 0)
 						particles[p].weight *= multipler;
-					
-					//associations.push_back(association+1);
-					//sense_x.push_back(trans_observations[i].x);
-					//sense_y.push_back(trans_observations[i].y);
 				}
 				weights[p] = particles[p].weight;
 			}
 			
 		}
-
-		// Normalize weights
-		long double weights_sum = 0;
-		for(int i = 0; i < weights.size(); i++)
-			weights_sum += weights[p];
-		
-		for(int i = 0; i < weights.size(); i++)
-			weights[p] /= weights_sum;
-		
 	}
 }
 
@@ -229,36 +212,14 @@ void ParticleFilter::resample() {
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
 
-	// Get all of the weights from the particles vector
-	vector<double> w;
-  	for (int i = 0; i < num_particles; i++)
-    	w.push_back(particles[i].weight);
-
-	// Find the highest weight
-	double w_max = *max_element(w.begin(), w.end());
-
-	// Use the highest weight for a uniform distribution 
-	uniform_real_distribution<double> uniform_real_dist(0.0, w_max);
-	
-	
-	// Resampling wheel
-	// Need a random index for the resampling wheel
-	uniform_int_distribution<int> uniform_int_dist(0, num_particles-1);
 	default_random_engine gen;
-	auto index = uniform_int_dist(gen);
-	double beta = 0;
+	discrete_distribution<int> distribution(weights.begin(), weights.end());
+	
 	vector<Particle> resample_particles;
-
-	for (int i = 0; i < num_particles; i++)
-	{
-		beta += uniform_real_dist(gen)*2;
-		while (beta > w[index]) 
-		{
-			beta -= w[index];
-			index = (index + 1) % num_particles;
-		}
-		resample_particles.push_back(particles[index]);
-	}
+	
+	for(int i = 0; i < num_particles; i++)
+		resample_particles.push_back(particles[distribution(gen)]);
+	
 	particles = resample_particles;
 }
 
